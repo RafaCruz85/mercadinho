@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catálogo do Mercadinho</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e8710a">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1c2430;--mut:#6b7686;--bd:#e1e5ea;--ac:#e8710a;--acx:#fff;--dg:#d64545;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181d;--card:#1e242b;--tx:#eef1f4;--mut:#9aa5b3;--bd:#2f3842;--ac:#ff9b3d;--acx:#2a1500;--dg:#ff7a7a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14181d;--card:#1e242b;--tx:#eef1f4;--mut:#9aa5b3;--bd:#2f3842;--ac:#ff9b3d;--acx:#2a1500;--dg:#ff7a7a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:12px 12px 96px;max-width:720px;margin:0 auto}
+h1{font-size:1.3rem;margin:8px 4px 12px}
+input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;width:100%}
+label{display:block;font-size:.8rem;color:var(--mut);margin:14px 0 4px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 16px;background:var(--ac);color:var(--acx);font-weight:600}
+.seg{display:flex;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.seg button{background:var(--card);color:var(--mut);border-radius:0;flex:1;font-weight:500;padding:12px 8px}
+.seg button.on{background:var(--ac);color:var(--acx);font-weight:700}
+.row{display:flex;gap:8px;margin-top:20px}.row>*{flex:1}
+.sec{background:none;color:var(--mut);border:1px solid var(--bd);font-weight:500}
+.it{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px}
+.top{display:flex;align-items:center;gap:10px}
+.n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.n small{display:block;color:var(--mut);font-weight:400;font-size:.8rem}
+.pr{font-weight:700;font-size:1.25rem;white-space:nowrap;text-align:right}
+.pr small{font-size:.75rem;color:var(--mut);font-weight:500}
+.acts{display:flex;gap:8px;margin-top:10px}
+.acts button{flex:1;padding:8px;font-size:.9rem;background:var(--bg);color:var(--tx);border:1px solid var(--bd);font-weight:500}
+.acts .x{color:var(--dg)}
+.empty{padding:24px;text-align:center;color:var(--mut)}
+.cont{color:var(--mut);font-size:.85rem;margin:10px 2px}
+.dica{font-size:.85rem;color:var(--mut);margin-top:6px;min-height:1.2em}
+.nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav button{flex:1;background:none;color:var(--mut);border-radius:0;padding:14px 8px;font-weight:500}
+.nav button.on{color:var(--ac);font-weight:700}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<section id="t1">
+  <h1>🏪 Produtos</h1>
+  <input id="busca" type="search" placeholder="🔍 Buscar produto">
+  <div class="cont" id="cont"></div>
+  <div id="lista"></div>
+</section>
+
+<section id="t2" hidden>
+  <h1 id="tit">➕ Novo produto</h1>
+  <label>Nome do produto</label>
+  <input id="nome" placeholder="Ex.: Arroz 5 kg, Tomate…" autocomplete="off">
+  <label>Vendido por</label>
+  <div class="seg" id="segU"><button data-u="un" class="on">Unidade</button><button data-u="kg">Quilo (kg)</button></div>
+  <label>Preço de compra (R$)</label>
+  <input id="compra" placeholder="0,00" inputmode="decimal" autocomplete="off">
+  <label>Porcentagem de lucro</label>
+  <div class="seg" id="segP"><button data-p="40" class="on">40%</button><button data-p="60">60%</button><button data-p="m">Outra</button></div>
+  <input id="pct" placeholder="Digite a porcentagem. Ex.: 35" inputmode="decimal" style="margin-top:8px" hidden>
+  <label>Valor de venda (R$) · pode alterar manualmente</label>
+  <input id="venda" placeholder="0,00" inputmode="decimal" autocomplete="off">
+  <div class="dica" id="dica"></div>
+  <div class="row"><button id="salvar">Salvar produto</button><button id="cancela" class="sec">Cancelar</button></div>
+</section>
+
+<nav class="nav">
+  <button data-t="1" class="on">📋 Produtos</button>
+  <button data-t="2">➕ Cadastro</button>
+</nav>
+
+<script>
+var KEY="mercadinhoCatalogo",itens=[],edit=null,un="un",modo="40";
+try{itens=JSON.parse(localStorage.getItem(KEY)||"[]")||[]}catch(e){itens=[]}
+itens.forEach(function(it){if(it.venda===undefined&&it.preco!==undefined){it.venda=it.preco;it.compra=0}});
+function salva(){try{localStorage.setItem(KEY,JSON.stringify(itens))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function fmt(n){return(Math.round(n*100)/100).toFixed(2).replace(".",",")}
+function num(s){return parseFloat(String(s).replace(",","."))}
+function norm(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function tela(n){$("t1").hidden=n!==1;$("t2").hidden=n!==2;document.querySelectorAll(".nav button").forEach(function(b){b.classList.toggle("on",+b.dataset.t===n)});window.scrollTo(0,0);if(n===1)desenha()}
+function setUn(u){un=u;document.querySelectorAll("#segU button").forEach(function(b){b.classList.toggle("on",b.dataset.u===u)})}
+function setModo(m){modo=m;document.querySelectorAll("#segP button").forEach(function(b){b.classList.toggle("on",b.dataset.p===m)});$("pct").hidden=m!=="m"}
+function dica(){var c=num($("compra").value),v=num($("venda").value);
+  $("dica").textContent=(!isNaN(c)&&!isNaN(v)&&c>0)?"Lucro: "+brl(v-c)+" por "+(un==="kg"?"kg":"unidade")+" (" +fmt((v/c-1)*100)+"% sobre a compra)":""}
+function calc(){var c=num($("compra").value),p=modo==="m"?num($("pct").value):+modo;
+  if(!isNaN(c)&&!isNaN(p))$("venda").value=fmt(c*(1+p/100));dica()}
+function desenha(){
+  var q=norm($("busca").value.trim());
+  var l=itens.filter(function(it){return!q||norm(it.nome).indexOf(q)>-1}).sort(function(a,b){return a.nome.localeCompare(b.nome,"pt-BR")});
+  $("cont").textContent=l.length+(l.length===1?" produto":" produtos");
+  $("lista").innerHTML=l.length?l.map(function(it){return '<div class="it" data-id="'+it.id+'"><div class="top"><div class="n">'+esc(it.nome)+'<small>'+(it.un==="kg"?"Vendido por kg":"Vendido por unidade")+'</small></div><div class="pr">'+brl(it.venda)+' <small>/'+(it.un==="kg"?"kg":"un")+'</small></div></div><div class="acts"><button class="ed">✏️ Editar</button><button class="x">🗑 Deletar</button></div></div>'}).join(""):'<div class="empty">Nenhum produto encontrado.</div>';
+}
+function limpa(){edit=null;$("nome").value="";$("compra").value="";$("pct").value="";$("venda").value="";setUn("un");setModo("40");$("dica").textContent="";$("tit").textContent="➕ Novo produto";$("salvar").textContent="Salvar produto"}
+document.querySelectorAll(".nav button").forEach(function(b){b.onclick=function(){if(+b.dataset.t===2&&!edit)limpa();tela(+b.dataset.t)}});
+document.querySelectorAll("#segU button").forEach(function(b){b.onclick=function(){setUn(b.dataset.u);dica()}});
+document.querySelectorAll("#segP button").forEach(function(b){b.onclick=function(){setModo(b.dataset.p);if(b.dataset.p==="m")$("pct").focus();calc()}});
+$("compra").oninput=calc;$("pct").oninput=calc;$("venda").oninput=dica;$("busca").oninput=desenha;
+$("cancela").onclick=function(){limpa();tela(1)};
+$("salvar").onclick=function(){
+  var nome=$("nome").value.trim(),c=num($("compra").value),v=num($("venda").value);
+  if(!nome){$("nome").focus();return}
+  if(isNaN(c)||c<0){$("compra").focus();return}
+  if(isNaN(v)||v<0){$("venda").focus();return}
+  var d={nome:nome,un:un,compra:c,venda:v};
+  if(edit){itens.forEach(function(it){if(it.id===edit){it.nome=d.nome;it.un=d.un;it.compra=d.compra;it.venda=d.venda}})}
+  else{d.id=Date.now();itens.push(d)}
+  salva();limpa();$("busca").value="";tela(1);
+};
+$("lista").addEventListener("click",function(e){
+  var row=e.target.closest(".it");if(!row)return;var id=+row.dataset.id;
+  if(e.target.classList.contains("x")){
+    var b=e.target;
+    if(b.dataset.arm){itens=itens.filter(function(it){return it.id!==id});salva();desenha()}
+    else{b.dataset.arm=1;b.textContent="Toque p/ confirmar";setTimeout(function(){if(b.isConnected){delete b.dataset.arm;b.textContent="🗑 Deletar"}},3000)}
+    return;
+  }
+  if(e.target.classList.contains("ed")){
+    var it=itens.filter(function(x){return x.id===id})[0];if(!it)return;
+    edit=id;$("nome").value=it.nome;setUn(it.un);
+    $("compra").value=it.compra?fmt(it.compra):"";$("venda").value=fmt(it.venda);
+    var p=it.compra>0?(it.venda/it.compra-1)*100:null;
+    if(p!==null&&Math.abs(p-40)<0.05)setModo("40");
+    else if(p!==null&&Math.abs(p-60)<0.05)setModo("60");
+    else{setModo("m");$("pct").value=p===null?"":String(Math.round(p*10)/10).replace(".",",")}
+    $("tit").textContent="✏️ Editar produto";$("salvar").textContent="Salvar alterações";dica();tela(2);
+  }
+});
+desenha();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
+</script>
+</body>
+</html>
